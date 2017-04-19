@@ -1,0 +1,5 @@
+#!/bin/bash
+# to get a random string with length of user defined, default is 10.
+Len=$1
+Random_string=`tr -cd "[:alnum:]@.-/!#$%&*" </dev/urandom | head -c ${Len:-10}`
+printf ":%s:\n" $Random_string
