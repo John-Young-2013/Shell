@@ -1,0 +1,107 @@
+#!/bin/bash
+# daysago -- given a date in the form month/day/year, calculates how many
+# days in the past that was, factoring in leap years, etc.
+
+# If you are on Linux, this should only be 'which date'
+# If you are on OS X, install coreutils with brew or from source for gdate.
+# date="$(which gdate)"
+
+daysInMonth(){
+case $1 in
+	1|3|5|7|8|10|12) dim=31;; # Most common value
+	4|6|9|11) dim=30;; #
+	2)dim=29;; # Depending on whether it's a leap year
+	*)dim=-1;; # Unknown month
+esac
+}
+
+isleap(){
+# Returns nonzero value for $leapyear if $1 was a leap year
+rem=$(($1 % 400))
+if [ $rem -eq 0 ];then
+	leapyear=True
+else
+	rem=$(($1 % 4))
+	rem2=$(($1 % 100))
+	if [ $rem -eq 0 -a $rem2 -ne 0 ];then
+		leapyear=True
+	else
+		leapyear=""
+	fi
+fi
+#leapyear=$(date -d "12/31/$1" +%j | grep 366)
+}
+#######################
+#### Main block
+#######################
+
+if [ $# -ne 3 ];then
+	echo "Usage: $(basename $0) mon day year"
+	echo " with just numerical values (ex: 7 7 1776)"
+	exit 1
+fi
+
+date --version >/dev/null 2>&1
+if [ $? -ne 0 ];then
+	echo "Sorry, but $(basename $0) can't run without GNU date." >&2
+	exit 1
+fi
+eval $(date "+thismon=%m;thisday=%d;thisyear=%Y;dayofyear=%j")
+startmon=$1; startday=$2; startyear=$3
+daysInMonth $startmon # sets global var dim.
+
+if [ $startday -lt 0 -o $startday -gt $dim ];then
+	echo "Invalid: Month #$startmon only has $dim days." >&2
+	exit 1
+fi
+
+if [ $startmon -eq 2 -a $startday -eq 29 ];then
+	isleap $startyear
+	if [ -z "$leapyear" ];then
+		echo "Invalid: $startyear wasn't a leap year; February had 28 days." >&2
+		exit 1
+	fi
+fi
+if [ $startyear -gt $thisyear ];then
+    echo "Invalid: $startyear is a future year" >&2
+    exit 1
+elif [ $startyear -eq $thisyear -a $startmon -gt $thismon ];then
+    echo "Invalid: $startmon is a future month" >&2
+    exit 1
+elif [ $startyear -eq $thisyear -a $startmon -eq $thismon -a $startday -gt $thisday ];then
+    echo "Invalid: $startday is a future day" >&2
+    exit 1
+fi
+####################
+#### Calculate days
+####################
+
+# Calculate the date string format for the specified starting date.
+startdatefmt="$startmon/$startday/$startyear"
+calculate="$((10#$(date -d "12/31/$startyear" +%j) - 10#$(date -d "$startdatefmt" +%j)))"
+daysleftinyear=$calculate
+
+### days in intervening years
+daysbetweenyears=0
+tempyear=$(($startyear + 1))
+while [ $tempyear -lt $thisyear ];do
+	daysbetweenyears=$((10#$daysbetweenyears + 10#$(date -d "12/31/$tempyear" +%j)))
+	tempyear=$(($tempyear + 1))
+done
+
+### days in current year
+
+dayofyear=$((10#$(date +%j))) # That's easy !
+
+### now add it all up
+if [ "$startyear" = "$thisyear" ];then
+		totaldays=$((10#$dayofyear - 10#$(date -d "$startdatefmt" +%j)))
+else
+	totaldays=$(( 10#$daysleftinyear + 10#$daysbetweenyears + 10#$dayofyear ))
+fi
+#/bin/echo "daysleftinyear: $daysleftinyear; daysbetweenyears: $daysbetweenyears; dayofyear: $dayofyear"
+/bin/echo -n "$totaldays days have elapsed between "
+/bin/echo -n "$startmon/$startday/$startyear "
+echo "and today, day $dayofyear of $thisyear."
+#/bin/echo "There's $daysleftinyear days left in $startyear!"
+exit 0
