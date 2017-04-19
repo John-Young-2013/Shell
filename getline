@@ -1,0 +1,10 @@
+#!/bin/bash
+# this script is going to get specific line of input file
+if [ $# -ne 2 ];then
+	echo -e "\tNeed 2 parameters"
+	echo -e "\tUsage: `basename $0` <input-file> <line-number>"
+	exit 1
+fi
+LINE=$1
+FILE=$2
+sed -n "${LINE}p" $FILE | grep ".*" --color=auto
