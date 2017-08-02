@@ -1,2 +1,0 @@
-#!/bin/bash
-nmap -sP -R -v -T4 $1 | grep "host down" | awk '{print $5}' | grep -iv '[a-z]'
